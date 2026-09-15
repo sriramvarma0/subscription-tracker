@@ -87,23 +87,25 @@
     </select>
 
     <!-- Export / Import Buttons -->
-    <a href="{{ url_for('export_import.export_csv') }}" class="btn btn-secondary" id="exportCsvBtn" title="Export CSV">
-      <i data-lucide="download"></i>
-      <span>CSV</span>
-    </a>
+    <div class="export-import-btns">
+      <a href="{{ url_for('export_import.export_csv') }}" class="btn btn-secondary" id="exportCsvBtn" title="Export CSV">
+        <i data-lucide="download"></i>
+        <span>CSV</span>
+      </a>
 
-    <a href="{{ url_for('export_import.export_json') }}" class="btn btn-secondary" id="exportJsonBtn" title="Download JSON Backup">
-      <i data-lucide="file-json"></i>
-      <span>Backup</span>
-    </a>
+      <a href="{{ url_for('export_import.export_json') }}" class="btn btn-secondary" id="exportJsonBtn" title="Download JSON Backup">
+        <i data-lucide="file-json"></i>
+        <span>Backup</span>
+      </a>
 
-    <button type="button" class="btn btn-secondary" id="importJsonBtn" onclick="triggerImportJSON()" title="Import JSON Backup">
-      <i data-lucide="upload"></i>
-      <span>Import</span>
-    </button>
-    <form id="importForm" action="{{ url_for('export_import.import_json') }}" method="POST" enctype="multipart/form-data" style="display:none;">
-      <input type="file" id="importFileInput" name="file" accept=".json" onchange="submitImportForm()" />
-    </form>
+      <button type="button" class="btn btn-secondary" id="importJsonBtn" onclick="triggerImportJSON()" title="Import JSON Backup">
+        <i data-lucide="upload"></i>
+        <span>Import</span>
+      </button>
+      <form id="importForm" action="{{ url_for('export_import.import_json') }}" method="POST" enctype="multipart/form-data" style="display:none;">
+        <input type="file" id="importFileInput" name="file" accept=".json" onchange="submitImportForm()" />
+      </form>
+    </div>
 
     <!-- Add Subscription Button -->
     <button type="button" class="btn btn-primary" id="addSubscriptionBtn" onclick="openAddModal()">
