@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Subscription Tracker{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+<section class="summary-grid" id="summarySection">
+  <div class="summary-card total" id="statTotal">
+    <div class="summary-icon"><i data-lucide="layers"></i></div>
+    <div class="summary-info">
+      <div class="val">{{ summary.total }}</div>
+      <div class="lbl">Total Subscriptions</div>
+    </div>
+  </div>
+  <div class="summary-card active" id="statActive">
+    <div class="summary-icon"><i data-lucide="check-circle"></i></div>
+    <div class="summary-info">
+      <div class="val">{{ summary.active }}</div>
+      <div class="lbl">Active</div>
+    </div>
+  </div>
+  <div class="summary-card expiring" id="statExpiring">
+    <div class="summary-icon"><i data-lucide="clock"></i></div>
+    <div class="summary-info">
+      <div class="val">{{ summary.expiring_soon }}</div>
+      <div class="lbl">Expiring Soon</div>
+    </div>
+  </div>
+  <div class="summary-card expired" id="statExpired">
+    <div class="summary-icon"><i data-lucide="alert-triangle"></i></div>
+    <div class="summary-info">
+      <div class="val">{{ summary.expired }}</div>
+      <div class="lbl">Expired</div>
+    </div>
+  </div>
+  <div class="summary-card noexpiry" id="statNoExpiry">
+    <div class="summary-icon"><i data-lucide="infinity"></i></div>
+    <div class="summary-info">
+      <div class="val">{{ summary.no_expiry }}</div>
+      <div class="lbl">No Expiry</div>
+    </div>
+  </div>
+</section>
+
+<!-- Controls & Filter Toolbar -->
+<section class="controls-bar" id="controlsBar">
+  <!-- Search Input -->
+  <div class="search-box">
+    <i data-lucide="search" class="search-icon"></i>
+    <input 
+      type="text" 
+      id="searchInput" 
+      placeholder="Search company, name, account, note..." 
+      value="{{ search_query }}"
+    />
+  </div>
+
+  <!-- Status Filter Pills -->
+  <div class="filter-pills" id="filterPills">
+    {% set filters = [
+      ('All', 'All'),
+      ('Active', 'Active'),
+      ('Expiring Soon', 'Expiring Soon'),
+      ('Expired', 'Expired'),
+      ('No Expiry', 'No Expiry'),
+      ('Sponsored', 'Sponsored')
+    ] %}
+    {% for label, val in filters %}
+      <a 
+        href="{{ url_for('dashboard.index', q=search_query, filter=val, sort=current_sort) }}" 
+        class="pill-btn {% if current_filter == val %}active{% endif %}"
+        id="filterPill-{{ val | lower | replace(' ', '-') }}"
+      >
+        {{ label }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Actions & Sort -->
+  <div class="actions-group">
+    <!-- Sort Dropdown -->
+    <select id="sortSelect" class="select-custom" aria-label="Sort subscriptions">
+      <option value="nearest_expiry" {% if current_sort == 'nearest_expiry' %}selected{% endif %}>Nearest Expiry</option>
+      <option value="farthest_expiry" {% if current_sort == 'farthest_expiry' %}selected{% endif %}>Farthest Expiry</option>
+      <option value="company_az" {% if current_sort == 'company_az' %}selected{% endif %}>Company A–Z</option>
+      <option value="recently_added" {% if current_sort == 'recently_added' %}selected{% endif %}>Recently Added</option>
+    </select>
+
+    <!-- Export / Import Buttons -->
+    <a href="{{ url_for('export_import.export_csv') }}" class="btn btn-secondary" id="exportCsvBtn" title="Export CSV">
+      <i data-lucide="download"></i>
+      <span>CSV</span>
+    </a>
+
+    <a href="{{ url_for('export_import.export_json') }}" class="btn btn-secondary" id="exportJsonBtn" title="Download JSON Backup">
+      <i data-lucide="file-json"></i>
+      <span>Backup</span>
+    </a>
+
+    <button type="button" class="btn btn-secondary" id="importJsonBtn" onclick="triggerImportJSON()" title="Import JSON Backup">
+      <i data-lucide="upload"></i>
+      <span>Import</span>
+    </button>
+    <form id="importForm" action="{{ url_for('export_import.import_json') }}" method="POST" enctype="multipart/form-data" style="display:none;">
+      <input type="file" id="importFileInput" name="file" accept=".json" onchange="submitImportForm()" />
+    </form>
+
+    <!-- Add Subscription Button -->
+    <button type="button" class="btn btn-primary" id="addSubscriptionBtn" onclick="openAddModal()">
+      <i data-lucide="plus"></i>
+      <span>Add Subscription</span>
+    </button>
+  </div>
+</section>
+
+<!-- Subscriptions Grid -->
+<section id="subscriptionsContainer">
+  {% if subscriptions %}
+    <div class="cards-grid" id="cardsGrid">
+      {% for sub in subscriptions %}
+        <div class="sub-card" id="subCard-{{ sub.id }}">
+          <div>
+            <div class="card-header">
+              <div>
+                <div class="company-title" id="cardCompany-{{ sub.id }}">{{ sub.company_name }}</div>
+                <div class="sub-title" id="cardSubName-{{ sub.id }}">{{ sub.subscription_name }}</div>
+              </div>
+              <div>
+                {% set st = sub.status %}
+                {% if st == 'Active' %}
+                  <span class="badge badge-active" id="cardBadge-{{ sub.id }}"><i data-lucide="check"></i> Active</span>
+                {% elif st == 'Expiring Soon' %}
+                  <span class="badge badge-expiring-soon" id="cardBadge-{{ sub.id }}"><i data-lucide="clock"></i> Expiring Soon</span>
+                {% elif st == 'Expired' %}
+                  <span class="badge badge-expired" id="cardBadge-{{ sub.id }}"><i data-lucide="x"></i> Expired</span>
+                {% else %}
+                  <span class="badge badge-no-expiry" id="cardBadge-{{ sub.id }}"><i data-lucide="infinity"></i> No Expiry</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="card-details">
+              <div class="detail-row">
+                <i data-lucide="credit-card" style="width:16px; color: var(--text-muted);"></i>
+                <span class="account-pill" id="cardAccount-{{ sub.id }}">{{ sub.account }}</span>
+              </div>
+              <div class="detail-row">
+                <i data-lucide="calendar" style="width:16px; color: var(--text-muted);"></i>
+                <span>Start: <strong>{% if sub.start_date %}{{ sub.start_date.strftime('%b %d, %Y') }}{% else %}Not specified{% endif %}</strong></span>
+              </div>
+              <div class="detail-row">
+                <i data-lucide="calendar-off" style="width:16px; color: var(--text-muted);"></i>
+                <span>End: <strong>{{ sub.end_date.strftime('%b %d, %Y') }}</strong></span>
+              </div>
+
+              {% if sub.is_sponsored %}
+                <div class="sponsor-box" id="cardSponsor-{{ sub.id }}">
+                  <div style="display:flex; align-items:center; gap:0.4rem; color: #818cf8; font-weight:600; margin-bottom:0.2rem;">
+                    <i data-lucide="heart" style="width:14px;"></i>
+                    <span>Sponsored by {{ sub.sponsor_company }}</span>
+                  </div>
+                  {% if sub.sponsor_account %}
+                    <div style="color: var(--text-muted); font-size:0.775rem;">Sponsor Account: {{ sub.sponsor_account }}</div>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              {% if sub.note %}
+                <div class="note-box" id="cardNote-{{ sub.id }}">
+                  "{{ sub.note }}"
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <button type="button" class="btn btn-secondary btn-icon-sm" onclick="openEditModal({{ sub.id }})" id="editBtn-{{ sub.id }}" title="Edit">
+              <i data-lucide="edit-3" style="width:16px; height:16px;"></i>
+            </button>
+            <button type="button" class="btn btn-danger btn-icon-sm" onclick="openDeleteModal({{ sub.id }}, '{{ sub.company_name | replace("'", "\\'") }}')" id="deleteBtn-{{ sub.id }}" title="Delete">
+              <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+            </button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state" id="emptyState">
+      <i data-lucide="box"></i>
+      <h3>No subscriptions found</h3>
+      <p>
+        {% if search_query or current_filter != 'All' %}
+          No subscriptions match your current search or filter.
+        {% else %}
+          You haven't added any subscriptions yet. Click below to add your first subscription!
+        {% endif %}
+      </p>
+      <button type="button" class="btn btn-primary" onclick="openAddModal()">
+        <i data-lucide="plus"></i>
+        <span>Add Subscription</span>
+      </button>
+    </div>
+  {% endif %}
+</section>
+
+<!-- Add / Edit Subscription Modal -->
+<div class="modal-overlay" id="subscriptionModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Subscription</h2>
+      <button type="button" class="close-btn" onclick="closeSubModal()">&times;</button>
+    </div>
+
+    <form id="subscriptionForm" action="{{ url_for('subscriptions.create') }}" method="POST">
+      <input type="hidden" id="subId" name="sub_id" value="" />
+
+      <div class="form-group">
+        <label for="company_name">Company Name <span class="required">*</span></label>
+        <input type="text" id="company_name" name="company_name" class="form-control" placeholder="e.g. Netflix, Spotify, GitHub" required />
+      </div>
+
+      <div class="form-group">
+        <label for="subscription_name">Subscription Name <span class="required">*</span></label>
+        <input type="text" id="subscription_name" name="subscription_name" class="form-control" placeholder="e.g. Premium Plan, Team License" required />
+      </div>
+
+      <div class="form-group">
+        <label for="account">Subscription account / Account identifier <span class="required">*</span></label>
+        <input type="text" id="account" name="account" class="form-control" placeholder="e.g. user@gmail.com, Apple ID, Amazon ending 1234" required />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start_date">Start Date</label>
+          <input type="date" id="start_date" name="start_date" class="form-control" placeholder="Optional" />
+        </div>
+
+        <div class="form-group">
+          <label for="end_date">End Date <span class="required">*</span></label>
+          <input type="date" id="end_date" name="end_date" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Sponsored?</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="is_sponsored" id="sponsored_no" value="false" checked />
+            <span>No</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="is_sponsored" id="sponsored_yes" value="true" />
+            <span>Yes</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sponsor Fields (Hidden by default unless Sponsored is Yes) -->
+      <div class="sponsor-fields hidden" id="sponsorFields">
+        <div class="form-group">
+          <label for="sponsor_company">Sponsor Company <span class="required">*</span></label>
+          <input type="text" id="sponsor_company" name="sponsor_company" class="form-control" placeholder="Company sponsoring this subscription" />
+        </div>
+        <div class="form-group">
+          <label for="sponsor_account">Sponsor Account</label>
+          <input type="text" id="sponsor_account" name="sponsor_account" class="form-control" placeholder="Optional sponsor account ID" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="note">Personal Note</label>
+        <textarea id="note" name="note" class="form-control" rows="3" placeholder="Optional notes..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeSubModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveSubBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h2>Confirm Delete</h2>
+      <button type="button" class="close-btn" onclick="closeDeleteModal()">&times;</button>
+    </div>
+    
+    <p style="margin-bottom: 1.5rem; color: var(--text-muted); font-size:0.95rem;">
+      Are you sure you want to delete the subscription for <strong id="deleteCompanyName" style="color: var(--text-main);"></strong>?
+    </p>
+
+    <form id="deleteForm" action="" method="POST">
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
