@@ -19,7 +19,8 @@ venv.bak/
 .env.*.local
 
 # Databases & Local Data
-instance/
+instance/*
+!instance/.gitkeep
 *.db
 *.sqlite
 *.sqlite3
