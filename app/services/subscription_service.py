@@ -41,20 +41,18 @@ class SubscriptionService:
             elif isinstance(start_date_raw, date):
                 start_date = start_date_raw
 
-        # Parse end_date (Required)
+        # Parse end_date (Optional - None indicates No Expiry)
         end_date = None
-        if isinstance(end_date_raw, str):
-            end_date_raw = end_date_raw.strip()
-            if not end_date_raw:
-                raise ValueError("End date is required.")
-            try:
-                end_date = datetime.strptime(end_date_raw, '%Y-%m-%d').date()
-            except ValueError:
-                raise ValueError("End date must be in YYYY-MM-DD format.")
-        elif isinstance(end_date_raw, date):
-            end_date = end_date_raw
-        else:
-            raise ValueError("End date is required.")
+        if end_date_raw is not None and end_date_raw != '':
+            if isinstance(end_date_raw, str):
+                end_date_raw = end_date_raw.strip()
+                if end_date_raw:
+                    try:
+                        end_date = datetime.strptime(end_date_raw, '%Y-%m-%d').date()
+                    except ValueError:
+                        raise ValueError("End date must be in YYYY-MM-DD format.")
+            elif isinstance(end_date_raw, date):
+                end_date = end_date_raw
 
         if start_date and end_date and end_date < start_date:
             raise ValueError("End date cannot be before start date.")
@@ -116,25 +114,29 @@ class SubscriptionService:
             else:
                 subscriptions = [s for s in subscriptions if s.status == filter_status]
 
-        # Apply sorting
+        # Apply sorting relative to present date (today)
+        today = date.today()
         if sort_by == 'farthest_expiry':
-            # Subscriptions with end_date sorted descending, undated at end
-            subscriptions.sort(key=lambda s: (s.end_date is None, s.end_date), reverse=False)
-            # Dated items first sorted descending, then undated
-            dated = [s for s in subscriptions if s.end_date is not None]
+            upcoming = [s for s in subscriptions if s.end_date is not None and s.end_date >= today]
+            expired = [s for s in subscriptions if s.end_date is not None and s.end_date < today]
             undated = [s for s in subscriptions if s.end_date is None]
-            dated.sort(key=lambda s: s.end_date, reverse=True)
-            subscriptions = dated + undated
+            upcoming.sort(key=lambda s: s.end_date, reverse=True)
+            expired.sort(key=lambda s: s.end_date, reverse=False)
+            subscriptions = upcoming + expired + undated
         elif sort_by == 'company_az':
             subscriptions.sort(key=lambda s: s.company_name.lower())
         elif sort_by == 'recently_added':
             subscriptions.sort(key=lambda s: s.created_at, reverse=True)
         else: # nearest_expiry (default)
-            # Dated items sorted ascending by end_date, undated items after dated items
-            dated = [s for s in subscriptions if s.end_date is not None]
+            # Upcoming/current sorted ascending by end_date (nearest future expiry first),
+            # then expired sorted descending by end_date (most recently expired first),
+            # then undated items at the end
+            upcoming = [s for s in subscriptions if s.end_date is not None and s.end_date >= today]
+            expired = [s for s in subscriptions if s.end_date is not None and s.end_date < today]
             undated = [s for s in subscriptions if s.end_date is None]
-            dated.sort(key=lambda s: s.end_date)
-            subscriptions = dated + undated
+            upcoming.sort(key=lambda s: s.end_date)
+            expired.sort(key=lambda s: s.end_date, reverse=True)
+            subscriptions = upcoming + expired + undated
 
         return subscriptions
 

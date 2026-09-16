@@ -5,35 +5,35 @@
 {% block content %}
 <!-- Summary Cards -->
 <section class="summary-grid" id="summarySection">
-  <div class="summary-card total" id="statTotal">
+  <div class="summary-card total" id="statTotal" onclick="filterByStatus('All')" style="cursor: pointer;" title="Filter by All">
     <div class="summary-icon"><i data-lucide="layers"></i></div>
     <div class="summary-info">
       <div class="val">{{ summary.total }}</div>
       <div class="lbl">Total Subscriptions</div>
     </div>
   </div>
-  <div class="summary-card active" id="statActive">
+  <div class="summary-card active" id="statActive" onclick="filterByStatus('Active')" style="cursor: pointer;" title="Filter by Active">
     <div class="summary-icon"><i data-lucide="check-circle"></i></div>
     <div class="summary-info">
       <div class="val">{{ summary.active }}</div>
       <div class="lbl">Active</div>
     </div>
   </div>
-  <div class="summary-card expiring" id="statExpiring">
+  <div class="summary-card expiring" id="statExpiring" onclick="filterByStatus('Expiring Soon')" style="cursor: pointer;" title="Filter by Expiring Soon">
     <div class="summary-icon"><i data-lucide="clock"></i></div>
     <div class="summary-info">
       <div class="val">{{ summary.expiring_soon }}</div>
       <div class="lbl">Expiring Soon</div>
     </div>
   </div>
-  <div class="summary-card expired" id="statExpired">
+  <div class="summary-card expired" id="statExpired" onclick="filterByStatus('Expired')" style="cursor: pointer;" title="Filter by Expired">
     <div class="summary-icon"><i data-lucide="alert-triangle"></i></div>
     <div class="summary-info">
       <div class="val">{{ summary.expired }}</div>
       <div class="lbl">Expired</div>
     </div>
   </div>
-  <div class="summary-card noexpiry" id="statNoExpiry">
+  <div class="summary-card noexpiry" id="statNoExpiry" onclick="filterByStatus('No Expiry')" style="cursor: pointer;" title="Filter by No Expiry">
     <div class="summary-icon"><i data-lucide="infinity"></i></div>
     <div class="summary-info">
       <div class="val">{{ summary.no_expiry }}</div>
@@ -152,7 +152,11 @@
               </div>
               <div class="detail-row">
                 <i data-lucide="calendar-off" style="width:16px; color: var(--text-muted);"></i>
-                <span>End: <strong>{{ sub.end_date.strftime('%b %d, %Y') }}</strong></span>
+                <span>End: <strong>{% if sub.end_date %}{{ sub.end_date.strftime('%b %d, %Y') }}{% else %}No Expiry{% endif %}</strong>
+                {% if sub.expiry_info and sub.end_date %}
+                  <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.3rem;">({{ sub.expiry_info }})</span>
+                {% endif %}
+                </span>
               </div>
 
               {% if sub.is_sponsored %}
@@ -238,8 +242,8 @@
         </div>
 
         <div class="form-group">
-          <label for="end_date">End Date <span class="required">*</span></label>
-          <input type="date" id="end_date" name="end_date" class="form-control" required />
+          <label for="end_date">End Date <span style="font-weight: normal; font-size: 0.825rem; color: var(--text-muted);">(Leave blank for No Expiry)</span></label>
+          <input type="date" id="end_date" name="end_date" class="form-control" />
         </div>
       </div>
 

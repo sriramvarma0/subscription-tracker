@@ -13,13 +13,17 @@ def test_status_calculation(app, user_a):
             account="user@gmail.com", start_date=today, end_date=None
         )
         assert sub1.status == "No Expiry"
+        assert sub1.days_until_expiry is None
+        assert sub1.expiry_info == "No expiry date"
 
         # Expired
         sub2 = Subscription(
             user_id=user_a.id, company_name="Gym", subscription_name="Annual Pass",
-            account="Pass123", start_date=today - timedelta(days=100), end_date=today - timedelta(days=1)
+            account="Pass123", start_date=today - timedelta(days=100), end_date=today - timedelta(days=10)
         )
         assert sub2.status == "Expired"
+        assert sub2.days_until_expiry == -10
+        assert sub2.expiry_info == "Expired 10 days ago"
 
         # Expiring Soon
         sub3 = Subscription(
@@ -27,6 +31,8 @@ def test_status_calculation(app, user_a):
             account="my-domain.com", start_date=today - timedelta(days=300), end_date=today + timedelta(days=15)
         )
         assert sub3.status == "Expiring Soon"
+        assert sub3.days_until_expiry == 15
+        assert sub3.expiry_info == "Expires in 15 days"
 
         # Active
         sub4 = Subscription(
@@ -34,6 +40,15 @@ def test_status_calculation(app, user_a):
             account="AWS-123", start_date=today, end_date=today + timedelta(days=60)
         )
         assert sub4.status == "Active"
+        assert sub4.days_until_expiry == 60
+        assert sub4.expiry_info == "Expires in 60 days"
+
+        # Future Start Date (Upcoming)
+        sub5 = Subscription(
+            user_id=user_a.id, company_name="Conference Pass", subscription_name="Ticket",
+            account="Event123", start_date=today + timedelta(days=10), end_date=today + timedelta(days=20)
+        )
+        assert sub5.status == "Active"
 
 def test_create_subscription_validation(app, user_a):
     today = date.today()
@@ -44,17 +59,12 @@ def test_create_subscription_validation(app, user_a):
                 'company_name': '', 'subscription_name': 'Plan', 'account': 'acc', 'end_date': '2026-12-31'
             })
 
-        # Missing required field end_date
-        with pytest.raises(ValueError, match="End date is required"):
-            SubscriptionService.create_subscription(user_a.id, {
-                'company_name': 'Company', 'subscription_name': 'Plan', 'account': 'acc', 'start_date': '2026-01-01'
-            })
-
         # End date before start date
         with pytest.raises(ValueError, match="End date cannot be before start date"):
             SubscriptionService.create_subscription(user_a.id, {
                 'company_name': 'Co', 'subscription_name': 'Plan', 'account': 'acc',
-                'start_date': '2026-05-01', 'end_date': '2026-04-01'
+                'start_date': (today + timedelta(days=30)).isoformat(),
+                'end_date': today.isoformat()
             })
 
         # Sponsored true without sponsor_company
@@ -64,7 +74,15 @@ def test_create_subscription_validation(app, user_a):
                 'end_date': '2026-12-31', 'is_sponsored': True, 'sponsor_company': ''
             })
 
-        # Optional start_date (omitted start_date succeeds)
+        # Optional start_date and optional end_date (No Expiry)
+        sub_no_end = SubscriptionService.create_subscription(user_a.id, {
+            'company_name': 'No Expiry Sub', 'subscription_name': 'Plan', 'account': 'acc',
+            'end_date': ''
+        })
+        assert sub_no_end.start_date is None
+        assert sub_no_end.end_date is None
+        assert sub_no_end.status == "No Expiry"
+
         sub_no_start = SubscriptionService.create_subscription(user_a.id, {
             'company_name': 'Optional Start Co', 'subscription_name': 'Plan', 'account': 'acc',
             'end_date': (today + timedelta(days=60)).isoformat()
@@ -149,6 +167,10 @@ def test_search_filter_sort(app, user_a):
         res_sponsored = SubscriptionService.get_subscriptions(user_a.id, filter_status='Sponsored')
         assert len(res_sponsored) == 1
         assert res_sponsored[0].company_name == 'GitHub'
+
+        # Sort by Nearest Expiry (Adobe in 10 days, GitHub in 90 days, Zendesk expired 5 days ago)
+        res_nearest = SubscriptionService.get_subscriptions(user_a.id, sort_by='nearest_expiry')
+        assert [s.company_name for s in res_nearest] == ['Adobe Creative Cloud', 'GitHub', 'Zendesk']
 
         # Sort by Company A-Z
         res_az = SubscriptionService.get_subscriptions(user_a.id, sort_by='company_az')

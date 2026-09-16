@@ -10,7 +10,7 @@ class Subscription(db.Model):
     subscription_name = db.Column(db.String(255), nullable=False)
     account = db.Column(db.String(255), nullable=False)
     start_date = db.Column(db.Date, nullable=True)
-    end_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
     is_sponsored = db.Column(db.Boolean, nullable=False, default=False)
     sponsor_company = db.Column(db.String(255), nullable=True)
     sponsor_account = db.Column(db.String(255), nullable=True)
@@ -26,13 +26,43 @@ class Subscription(db.Model):
     user = db.relationship('User', backref=db.backref('subscriptions', cascade='all, delete-orphan', lazy=True))
 
     @property
+    def days_until_expiry(self):
+        """
+        Calculates number of days until expiry relative to present date (today).
+        Returns negative integer for expired, 0 for expiring today, positive for future, None for no expiry.
+        """
+        if self.end_date is None:
+            return None
+        return (self.end_date - date.today()).days
+
+    @property
+    def expiry_info(self) -> str:
+        """
+        Returns a user-friendly string describing the status relative to present date.
+        """
+        if self.end_date is None:
+            return "No expiry date"
+        days = self.days_until_expiry
+        if days < 0:
+            abs_days = abs(days)
+            return f"Expired {abs_days} day{'s' if abs_days != 1 else ''} ago"
+        elif days == 0:
+            return "Expires today"
+        elif days == 1:
+            return "Expires tomorrow"
+        elif days <= 30:
+            return f"Expires in {days} days"
+        else:
+            return f"Expires in {days} days"
+
+    @property
     def status(self) -> str:
         """
-        Calculates status dynamically based on current local date and end_date:
+        Calculates status dynamically based on current local date (today), start_date, and end_date:
         - No Expiry: end_date is None
         - Expired: end_date is before today
-        - Expiring Soon: end_date is today or within the next 30 days
-        - Active: end_date is more than 30 days away
+        - Expiring Soon: end_date is today or within the next 30 days (and subscription has started)
+        - Active: end_date is more than 30 days away (or start_date is in the future)
         """
         if self.end_date is None:
             return "No Expiry"
@@ -40,6 +70,9 @@ class Subscription(db.Model):
         today = date.today()
         if self.end_date < today:
             return "Expired"
+        elif self.start_date and self.start_date > today:
+            # Subscription start_date is in the future relative to present date
+            return "Active"
         elif today <= self.end_date <= (today + timedelta(days=30)):
             return "Expiring Soon"
         else:
@@ -58,6 +91,8 @@ class Subscription(db.Model):
             "sponsor_account": self.sponsor_account,
             "note": self.note,
             "status": self.status,
+            "days_until_expiry": self.days_until_expiry,
+            "expiry_info": self.expiry_info,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }

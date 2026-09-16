@@ -123,6 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = url.toString();
   }
 
+  window.filterByStatus = function (status) {
+    updateDashboardParams({ filter: status });
+  };
+
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
       updateDashboardParams({ sort: e.target.value });
