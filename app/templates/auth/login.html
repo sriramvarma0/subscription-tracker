@@ -1,40 +1,223 @@
 {% extends 'base.html' %}
 
-{% block title %}Sign In - Subscription Tracker{% endblock %}
+{% block title %}
+  {% if active_tab == 'signup' %}Sign Up{% elif active_tab == 'set_password' %}Set Password{% else %}Sign In{% endif %} - Subscription Tracker
+{% endblock %}
 
 {% block content %}
 <div class="auth-container">
-  <div class="auth-card">
-    <div style="display: flex; justify-content: center; margin-bottom: 1rem; color: #6366f1;">
+  <div class="auth-card" style="max-width: 420px;">
+    <div style="display: flex; justify-content: center; margin-bottom: 0.75rem; color: #818cf8;">
       <i data-lucide="shield-check" style="width: 48px; height: 48px;"></i>
     </div>
-    <h1>Subscription Tracker</h1>
-    <p>Enter your email address to continue to your subscriptions.</p>
-    
-    <form action="{{ url_for('auth.login') }}" method="POST" id="loginForm">
-      <div class="form-group" style="text-align: left;">
-        <label for="email">Email Address <span class="required">*</span></label>
-        <div style="position: relative;">
-          <input 
-            type="email" 
-            name="email" 
-            id="emailInput" 
-            class="form-control" 
-            placeholder="name@example.com" 
-            value="{{ email or '' }}"
-            required 
-            autofocus
-            style="padding-left: 2.5rem;"
-          />
-          <i data-lucide="mail" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+    <h1 style="font-size: 1.5rem; margin-bottom: 0.25rem;">Subscription Tracker</h1>
+
+    {% if active_tab == 'set_password' %}
+      <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">
+        Set a password for <strong>{{ email }}</strong> to upgrade your account security.
+      </p>
+
+      <form action="{{ url_for('auth.login') }}" method="POST">
+        <input type="hidden" name="action" value="set_password" />
+        <input type="hidden" name="user_id" value="{{ pending_user.id if pending_user else '' }}" />
+        <input type="hidden" name="email" value="{{ email or '' }}" />
+
+        <div class="form-group" style="text-align: left;">
+          <label for="setPasswordInput">New Password <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="password"
+              name="password"
+              id="setPasswordInput"
+              class="form-control"
+              placeholder="At least 6 characters"
+              required
+              autofocus
+              minlength="6"
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="lock" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
         </div>
+
+        <div class="form-group" style="text-align: left; margin-top: 1rem;">
+          <label for="setConfirmPasswordInput">Confirm New Password <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="password"
+              name="confirm_password"
+              id="setConfirmPasswordInput"
+              class="form-control"
+              placeholder="Re-enter password"
+              required
+              minlength="6"
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="lock" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.5rem;">
+          <span>Set Password & Log In</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+
+    {% else %}
+      <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">
+        Manage your personal subscriptions securely.
+      </p>
+
+      <!-- Auth Tabs -->
+      <div style="display: flex; background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 4px; margin-bottom: 1.25rem; gap: 4px;">
+        <button
+          type="button"
+          id="tabBtnLogin"
+          class="btn {% if active_tab != 'signup' %}btn-primary{% else %}btn-secondary{% endif %}"
+          style="flex: 1; justify-content: center; padding: 0.4rem; font-size: 0.875rem;"
+          onclick="switchAuthTab('login')"
+        >
+          Sign In
+        </button>
+        <button
+          type="button"
+          id="tabBtnSignup"
+          class="btn {% if active_tab == 'signup' %}btn-primary{% else %}btn-secondary{% endif %}"
+          style="flex: 1; justify-content: center; padding: 0.4rem; font-size: 0.875rem;"
+          onclick="switchAuthTab('signup')"
+        >
+          Sign Up
+        </button>
       </div>
-      
-      <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="width: 100%; justify-content: center; margin-top: 1.25rem;">
-        <span>Continue</span>
-        <i data-lucide="arrow-right"></i>
-      </button>
-    </form>
+
+      <!-- Login Form -->
+      <form action="{{ url_for('auth.login') }}" method="POST" id="formLogin" style="display: {% if active_tab != 'signup' %}block{% else %}none{% endif %};">
+        <input type="hidden" name="action" value="login" />
+
+        <div class="form-group" style="text-align: left;">
+          <label for="loginEmail">Email Address <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="email"
+              name="email"
+              id="loginEmail"
+              class="form-control"
+              placeholder="name@example.com"
+              value="{{ email or '' }}"
+              required
+              {% if active_tab != 'signup' %}autofocus{% endif %}
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="mail" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <div class="form-group" style="text-align: left; margin-top: 1rem;">
+          <label for="loginPassword">Password <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="password"
+              name="password"
+              id="loginPassword"
+              class="form-control"
+              placeholder="Enter your password"
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="lock" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.5rem;">
+          <span>Sign In</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+
+      <!-- Signup Form -->
+      <form action="{{ url_for('auth.signup') }}" method="POST" id="formSignup" style="display: {% if active_tab == 'signup' %}block{% else %}none{% endif %};">
+        <input type="hidden" name="action" value="signup" />
+
+        <div class="form-group" style="text-align: left;">
+          <label for="signupEmail">Email Address <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="email"
+              name="email"
+              id="signupEmail"
+              class="form-control"
+              placeholder="name@example.com"
+              value="{{ email or '' }}"
+              required
+              {% if active_tab == 'signup' %}autofocus{% endif %}
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="mail" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <div class="form-group" style="text-align: left; margin-top: 1rem;">
+          <label for="signupPassword">Password <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="password"
+              name="password"
+              id="signupPassword"
+              class="form-control"
+              placeholder="At least 6 characters"
+              required
+              minlength="6"
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="lock" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <div class="form-group" style="text-align: left; margin-top: 1rem;">
+          <label for="signupConfirmPassword">Confirm Password <span class="required">*</span></label>
+          <div style="position: relative;">
+            <input
+              type="password"
+              name="confirm_password"
+              id="signupConfirmPassword"
+              class="form-control"
+              placeholder="Re-enter password"
+              required
+              minlength="6"
+              style="padding-left: 2.5rem;"
+            />
+            <i data-lucide="lock" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.5rem;">
+          <span>Create Account</span>
+          <i data-lucide="user-plus"></i>
+        </button>
+      </form>
+    {% endif %}
   </div>
 </div>
+
+<script>
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('formLogin');
+  const signupForm = document.getElementById('formSignup');
+  const tabBtnLogin = document.getElementById('tabBtnLogin');
+  const tabBtnSignup = document.getElementById('tabBtnSignup');
+
+  if (!loginForm || !signupForm) return;
+
+  if (tab === 'signup') {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    tabBtnLogin.className = 'btn btn-secondary';
+    tabBtnSignup.className = 'btn btn-primary';
+  } else {
+    signupForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    tabBtnSignup.className = 'btn btn-secondary';
+    tabBtnLogin.className = 'btn btn-primary';
+  }
+}
+</script>
 {% endblock %}
