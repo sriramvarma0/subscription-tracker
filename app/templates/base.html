@@ -16,6 +16,16 @@
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Inline Theme Script (Prevents Theme Flash) -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
 </head>
 <body>
   <!-- Navigation Header -->
@@ -27,17 +37,35 @@
       </a>
 
       {% if session.get('user_id') and g.user %}
-      <div class="user-nav">
-        <div class="user-badge" id="userEmailBadge">
-          <i data-lucide="user"></i>
-          <span>{{ g.user.email }}</span>
+        <!-- Navbar Center Search Bar -->
+        <div class="nav-search-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Search company, name, account, note..." 
+            value="{{ search_query if search_query else '' }}"
+          />
         </div>
-        <a href="{{ url_for('auth.logout') }}" class="btn-logout" id="logoutBtn" title="Logout">
-          <i data-lucide="log-out"></i>
-          <span>Logout</span>
-        </a>
-      </div>
       {% endif %}
+
+      <div class="user-nav">
+        <!-- Theme Toggle Button -->
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme (Dark / Light)">
+          <i data-lucide="moon" id="themeIcon"></i>
+        </button>
+
+        {% if session.get('user_id') and g.user %}
+          <div class="user-badge" id="userEmailBadge">
+            <i data-lucide="user"></i>
+            <span>{{ g.user.email }}</span>
+          </div>
+          <a href="{{ url_for('auth.logout') }}" class="btn-logout" id="logoutBtn" title="Logout">
+            <i data-lucide="log-out"></i>
+            <span>Logout</span>
+          </a>
+        {% endif %}
+      </div>
     </div>
   </header>
 

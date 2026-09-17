@@ -16,6 +16,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 
+  // Theme Toggle Functionality
+  window.toggleTheme = function () {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    syncThemeIcon(newTheme);
+  };
+
+  function syncThemeIcon(theme) {
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) {
+      themeIcon.setAttribute('data-lucide', theme === 'light' ? 'sun' : 'moon');
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+  }
+
+  // Sync icon with active theme state
+  const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  syncThemeIcon(activeTheme);
+
   // Initialize Lucide Icons
   if (window.lucide) {
     window.lucide.createIcons();
@@ -187,6 +210,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (renewModal) renewModal.classList.remove('active');
   };
 
+  // Subscription Details Modal Open/Close Logic
+  window.openDetailsModal = function (subId) {
+    const detailsModal = document.getElementById('detailsModal');
+    const container = document.getElementById(`detailsContent-${subId}`);
+    const modalBody = document.getElementById('detailsModalBody');
+    if (detailsModal && container && modalBody) {
+      modalBody.innerHTML = container.innerHTML;
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+      detailsModal.classList.add('active');
+    }
+  };
+
+  window.closeDetailsModal = function () {
+    const detailsModal = document.getElementById('detailsModal');
+    if (detailsModal) {
+      detailsModal.classList.remove('active');
+    }
+  };
+
   window.dismissAutoRenewBanner = function (subId, prevExpiry, currentAutoRenew) {
     const banner = document.getElementById(`autoRenewBanner-${subId}`);
     if (banner) {
@@ -282,4 +326,115 @@ document.addEventListener('DOMContentLoaded', () => {
     const importForm = document.getElementById('importForm');
     if (importForm) importForm.submit();
   };
+
+  // Custom Brand Auto-Suggest Dropdown Component
+  (function initCustomAutocomplete() {
+    const companyInput = document.getElementById('company_name');
+    const dropdown = document.getElementById('companyAutocompleteDropdown');
+    if (!companyInput || !dropdown) return;
+
+    const brandSuggestions = [
+      { name: 'Google', icon: 'chrome' },
+      { name: 'Microsoft', icon: 'layout-grid' },
+      { name: 'Netflix', icon: 'film' },
+      { name: 'Spotify', icon: 'music' },
+      { name: 'JioHotstar', icon: 'tv' },
+      { name: 'Amazon', icon: 'shopping-bag' },
+      { name: 'Apple', icon: 'apple' },
+      { name: 'GitHub', icon: 'github' },
+      { name: 'Adobe', icon: 'figma' },
+      { name: 'OpenAI', icon: 'bot' },
+      { name: 'YouTube', icon: 'chrome' },
+      { name: 'Xbox', icon: 'layout-grid' },
+      { name: 'Figma', icon: 'figma' },
+      { name: 'ChatGPT', icon: 'bot' }
+    ];
+
+    let selectedIndex = -1;
+
+    function renderSuggestions(filterText = '') {
+      const query = filterText.trim().toLowerCase();
+      const matches = brandSuggestions.filter(b => b.name.toLowerCase().includes(query));
+
+      if (matches.length === 0) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      dropdown.innerHTML = matches.map((b, idx) => `
+        <div class="autocomplete-item ${idx === selectedIndex ? 'active' : ''}" data-value="${b.name}">
+          <i data-lucide="${b.icon}"></i>
+          <span>${b.name}</span>
+        </div>
+      `).join('');
+
+      dropdown.classList.remove('hidden');
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+
+      dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+          selectBrandOption(item.getAttribute('data-value'));
+        });
+      });
+    }
+
+    function selectBrandOption(val) {
+      companyInput.value = val;
+      dropdown.classList.add('hidden');
+      selectedIndex = -1;
+    }
+
+    companyInput.addEventListener('input', (e) => {
+      selectedIndex = -1;
+      renderSuggestions(e.target.value);
+    });
+
+    companyInput.addEventListener('focus', () => {
+      renderSuggestions(companyInput.value);
+    });
+
+    companyInput.addEventListener('keydown', (e) => {
+      const items = dropdown.querySelectorAll('.autocomplete-item');
+      if (dropdown.classList.contains('hidden') || items.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === 'Enter') {
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+          e.preventDefault();
+          selectBrandOption(items[selectedIndex].getAttribute('data-value'));
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.classList.add('hidden');
+        selectedIndex = -1;
+      }
+    });
+
+    function updateActiveItem(items) {
+      items.forEach((item, idx) => {
+        if (idx === selectedIndex) {
+          item.classList.add('active');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!companyInput.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+        selectedIndex = -1;
+      }
+    });
+  })();
 });

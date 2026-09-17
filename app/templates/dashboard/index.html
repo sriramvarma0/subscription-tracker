@@ -42,49 +42,14 @@
   </div>
 </section>
 
-<!-- Controls & Filter Toolbar -->
+<!-- Actions & Controls Toolbar -->
 <section class="controls-bar" id="controlsBar">
-  <!-- Search Input -->
-  <div class="search-box">
-    <i data-lucide="search" class="search-icon"></i>
-    <input 
-      type="text" 
-      id="searchInput" 
-      placeholder="Search company, name, account, note..." 
-      value="{{ search_query }}"
-    />
-  </div>
-
-  <!-- Status Filter Pills -->
-  <div class="filter-pills" id="filterPills">
-    {% set filters = [
-      ('All', 'All'),
-      ('Active', 'Active'),
-      ('Expiring Soon', 'Expiring Soon'),
-      ('Expired', 'Expired'),
-      ('No Expiry', 'No Expiry'),
-      ('Sponsored', 'Sponsored')
-    ] %}
-    {% for label, val in filters %}
-      <a 
-        href="{{ url_for('dashboard.index', q=search_query, filter=val, sort=current_sort) }}" 
-        class="pill-btn {% if current_filter == val %}active{% endif %}"
-        id="filterPill-{{ val | lower | replace(' ', '-') }}"
-      >
-        {{ label }}
-      </a>
-    {% endfor %}
-  </div>
-
-  <!-- Actions & Sort -->
   <div class="actions-group">
-    <!-- Sort Dropdown -->
-    <select id="sortSelect" class="select-custom" aria-label="Sort subscriptions">
-      <option value="nearest_expiry" {% if current_sort == 'nearest_expiry' %}selected{% endif %}>Nearest Expiry</option>
-      <option value="farthest_expiry" {% if current_sort == 'farthest_expiry' %}selected{% endif %}>Farthest Expiry</option>
-      <option value="company_az" {% if current_sort == 'company_az' %}selected{% endif %}>Company A–Z</option>
-      <option value="recently_added" {% if current_sort == 'recently_added' %}selected{% endif %}>Recently Added</option>
-    </select>
+    <!-- Add Subscription Button (Primary Action) -->
+    <button type="button" class="btn btn-primary" id="addSubscriptionBtn" onclick="openAddModal()">
+      <i data-lucide="plus"></i>
+      <span>Add Subscription</span>
+    </button>
 
     <!-- Export / Import Buttons -->
     <div class="export-import-btns">
@@ -107,11 +72,13 @@
       </form>
     </div>
 
-    <!-- Add Subscription Button -->
-    <button type="button" class="btn btn-primary" id="addSubscriptionBtn" onclick="openAddModal()">
-      <i data-lucide="plus"></i>
-      <span>Add Subscription</span>
-    </button>
+    <!-- Sort Dropdown -->
+    <select id="sortSelect" class="select-custom" aria-label="Sort subscriptions">
+      <option value="nearest_expiry" {% if current_sort == 'nearest_expiry' %}selected{% endif %}>Nearest Expiry</option>
+      <option value="farthest_expiry" {% if current_sort == 'farthest_expiry' %}selected{% endif %}>Farthest Expiry</option>
+      <option value="company_az" {% if current_sort == 'company_az' %}selected{% endif %}>Company A–Z</option>
+      <option value="recently_added" {% if current_sort == 'recently_added' %}selected{% endif %}>Recently Added</option>
+    </select>
   </div>
 </section>
 
@@ -120,11 +87,50 @@
   {% if subscriptions %}
     <div class="cards-grid" id="cardsGrid">
       {% for sub in subscriptions %}
-        <div class="sub-card" id="subCard-{{ sub.id }}">
-          <div>
+        {% set name_lower = sub.company_name | lower %}
+        {% set brand_cls = "" %}
+        {% set brand_icon = "" %}
+        {% if 'google' in name_lower or 'youtube' in name_lower %}
+          {% set brand_cls = "brand-theme-google" %}
+          {% set brand_icon = "chrome" %}
+        {% elif 'microsoft' in name_lower or 'xbox' in name_lower or 'azure' in name_lower or 'office' in name_lower %}
+          {% set brand_cls = "brand-theme-microsoft" %}
+          {% set brand_icon = "layout-grid" %}
+        {% elif 'netflix' in name_lower %}
+          {% set brand_cls = "brand-theme-netflix" %}
+          {% set brand_icon = "film" %}
+        {% elif 'spotify' in name_lower %}
+          {% set brand_cls = "brand-theme-spotify" %}
+          {% set brand_icon = "music" %}
+        {% elif 'hotstar' in name_lower or 'jio' in name_lower %}
+          {% set brand_cls = "brand-theme-hotstar" %}
+          {% set brand_icon = "tv" %}
+        {% elif 'amazon' in name_lower or 'prime' in name_lower or 'aws' in name_lower %}
+          {% set brand_cls = "brand-theme-amazon" %}
+          {% set brand_icon = "shopping-bag" %}
+        {% elif 'apple' in name_lower or 'icloud' in name_lower %}
+          {% set brand_cls = "brand-theme-apple" %}
+          {% set brand_icon = "apple" %}
+        {% elif 'github' in name_lower %}
+          {% set brand_cls = "brand-theme-github" %}
+          {% set brand_icon = "github" %}
+        {% elif 'adobe' in name_lower or 'figma' in name_lower %}
+          {% set brand_cls = "brand-theme-adobe" %}
+          {% set brand_icon = "figma" %}
+        {% elif 'openai' in name_lower or 'chatgpt' in name_lower %}
+          {% set brand_cls = "brand-theme-openai" %}
+          {% set brand_icon = "bot" %}
+        {% endif %}
+        <div class="sub-card {{ brand_cls }} compact-card" id="subCard-{{ sub.id }}" onclick="openDetailsModal({{ sub.id }})" style="cursor: pointer;" title="Click to view full details">
+          <div class="card-face-content">
             <div class="card-header">
               <div>
-                <div class="company-title" id="cardCompany-{{ sub.id }}">{{ sub.company_name }}</div>
+                <div class="company-title" id="cardCompany-{{ sub.id }}">
+                  {% if brand_icon %}
+                    <i data-lucide="{{ brand_icon }}" class="company-brand-icon"></i>
+                  {% endif %}
+                  <span>{{ sub.company_name }}</span>
+                </div>
                 <div class="sub-title" id="cardSubName-{{ sub.id }}">{{ sub.subscription_name }}</div>
               </div>
               <div>
@@ -141,111 +147,180 @@
               </div>
             </div>
 
-            <div class="card-details">
-              <div class="detail-row">
-                <i data-lucide="credit-card" style="width:16px; color: var(--text-muted);"></i>
+            <div class="compact-card-body">
+              <div class="compact-row">
                 <span class="account-pill" id="cardAccount-{{ sub.id }}">{{ sub.account }}</span>
-              </div>
-              {% if not sub.is_sponsored and sub.cost is not none %}
-                <div class="detail-row">
-                  <i data-lucide="dollar-sign" style="width:16px; color: var(--text-muted);"></i>
-                  <span>Cost: <strong>
+                {% if not sub.is_sponsored and sub.cost is not none %}
+                  <span class="compact-cost">
                     {% if sub.currency == 'INR' %}₹{% elif sub.currency == 'EUR' %}€{% elif sub.currency == 'GBP' %}£{% elif sub.currency == 'CAD' %}CA${% elif sub.currency == 'AUD' %}A${% else %}${% endif %}{{ "%.2f"|format(sub.cost) }}
-                  </strong></span>
-                </div>
-              {% endif %}
-              <div class="detail-row">
-                <i data-lucide="calendar" style="width:16px; color: var(--text-muted);"></i>
-                <span>Start: <strong>{% if sub.start_date %}{{ sub.start_date.strftime('%b %d, %Y') }}{% else %}Not specified{% endif %}</strong></span>
-              </div>
-              <div class="detail-row">
-                <i data-lucide="calendar-off" style="width:16px; color: var(--text-muted);"></i>
-                <span>End: <strong>{% if sub.end_date %}{{ sub.end_date.strftime('%b %d, %Y') }}{% else %}No Expiry{% endif %}</strong>
-                {% if sub.expiry_info and sub.end_date %}
-                  <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.3rem;">({{ sub.expiry_info }})</span>
+                  </span>
+                {% elif sub.is_sponsored %}
+                  <span class="compact-sponsored"><i data-lucide="heart" style="width:14px; height:14px;"></i> Sponsored</span>
                 {% endif %}
-                </span>
-              </div>
-              <div class="detail-row">
-                <i data-lucide="refresh-cw" style="width:16px; color: var(--text-muted);"></i>
-                <span>Auto-renew: <strong>{{ sub.auto_renew | capitalize }}</strong></span>
               </div>
 
-              {% if sub.is_sponsored %}
-                <div class="sponsor-box" id="cardSponsor-{{ sub.id }}">
-                  <div style="display:flex; align-items:center; gap:0.4rem; color: #818cf8; font-weight:600; margin-bottom:0.2rem;">
-                    <i data-lucide="heart" style="width:14px;"></i>
-                    <span>Sponsored by {{ sub.sponsor_company }}</span>
+              <div class="compact-row text-muted" style="font-size:0.8rem; margin-top:0.4rem;">
+                <div style="display:flex; align-items:center; gap:0.35rem;">
+                  <i data-lucide="calendar" style="width:14px; height:14px;"></i>
+                  <span>{% if sub.end_date %}{{ sub.end_date.strftime('%b %d, %Y') }}{% else %}No Expiry{% endif %}</span>
+                </div>
+                {% if sub.expiry_info and sub.end_date %}
+                  <span class="expiry-pill">{{ sub.expiry_info }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Full Details Data Container for Modal -->
+            <div id="detailsContent-{{ sub.id }}" style="display:none;">
+              <div class="details-modal-header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1.25rem;">
+                <div>
+                  <div class="company-title" style="font-size:1.4rem;">
+                    {% if brand_icon %}
+                      <i data-lucide="{{ brand_icon }}" class="company-brand-icon"></i>
+                    {% endif %}
+                    <span>{{ sub.company_name }}</span>
                   </div>
-                  {% if sub.sponsor_account %}
-                    <div style="color: var(--text-muted); font-size:0.775rem;">Sponsor Account: {{ sub.sponsor_account }}</div>
+                  <div class="sub-title" style="font-size:0.95rem;">{{ sub.subscription_name }}</div>
+                </div>
+                <div>
+                  {% if st == 'Active' %}
+                    <span class="badge badge-active"><i data-lucide="check"></i> Active</span>
+                  {% elif st == 'Expiring Soon' %}
+                    <span class="badge badge-expiring-soon"><i data-lucide="clock"></i> Expiring Soon</span>
+                  {% elif st == 'Expired' %}
+                    <span class="badge badge-expired"><i data-lucide="x"></i> Expired</span>
+                  {% else %}
+                    <span class="badge badge-no-expiry"><i data-lucide="infinity"></i> No Expiry</span>
                   {% endif %}
                 </div>
-              {% endif %}
+              </div>
 
-              {% if sub.note %}
-                <div class="note-box" id="cardNote-{{ sub.id }}">
-                  "{{ sub.note }}"
+              <div class="details-grid" style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.25rem;">
+                <div class="detail-row">
+                  <i data-lucide="credit-card" style="width:16px; color: var(--text-muted);"></i>
+                  <span>Account: <strong>{{ sub.account }}</strong></span>
                 </div>
-              {% endif %}
-
-              {% if sub.auto_renew == 'YES' and st == 'Expired' %}
-                <div class="autorenew-banner" id="autoRenewBanner-{{ sub.id }}">
-                  <div style="font-size:0.85rem; color: #f59e0b; margin-bottom: 0.4rem; font-weight: 500;">
-                    <i data-lucide="refresh-cw" style="width:14px; height:14px; display:inline;"></i>
-                    This subscription was marked for auto-renewal. Did it auto-renew?
+                {% if not sub.is_sponsored and sub.cost is not none %}
+                  <div class="detail-row">
+                    <i data-lucide="dollar-sign" style="width:16px; color: var(--text-muted);"></i>
+                    <span>Cost: <strong>
+                      {% if sub.currency == 'INR' %}₹{% elif sub.currency == 'EUR' %}€{% elif sub.currency == 'GBP' %}£{% elif sub.currency == 'CAD' %}CA${% elif sub.currency == 'AUD' %}A${% else %}${% endif %}{{ "%.2f"|format(sub.cost) }}
+                    </strong></span>
                   </div>
-                  <div style="display:flex; gap:0.4rem;">
-                    <button type="button" class="btn btn-sm btn-primary" onclick="openRenewModal({{ sub.id }}, 'AUTO', '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">Yes</button>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="dismissAutoRenewBanner({{ sub.id }}, '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">No</button>
-                  </div>
+                {% endif %}
+                <div class="detail-row">
+                  <i data-lucide="calendar" style="width:16px; color: var(--text-muted);"></i>
+                  <span>Start Date: <strong>{% if sub.start_date %}{{ sub.start_date.strftime('%b %d, %Y') }}{% else %}Not specified{% endif %}</strong></span>
                 </div>
-              {% endif %}
+                <div class="detail-row">
+                  <i data-lucide="calendar-off" style="width:16px; color: var(--text-muted);"></i>
+                  <span>End Date: <strong>{% if sub.end_date %}{{ sub.end_date.strftime('%b %d, %Y') }}{% else %}No Expiry{% endif %}</strong>
+                  {% if sub.expiry_info and sub.end_date %}
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.3rem;">({{ sub.expiry_info }})</span>
+                  {% endif %}
+                  </span>
+                </div>
+                <div class="detail-row">
+                  <i data-lucide="refresh-cw" style="width:16px; color: var(--text-muted);"></i>
+                  <span>Auto-renew: <strong>{{ sub.auto_renew | capitalize }}</strong></span>
+                </div>
 
-              {% if sub.renewal_count > 0 %}
-                <button type="button" class="history-toggle-btn" onclick="toggleRenewalHistory({{ sub.id }})" id="historyToggle-{{ sub.id }}">
-                  <i data-lucide="history" style="width:14px; height:14px;"></i>
-                  <span>View Renewal History ({{ sub.renewal_count }})</span>
-                </button>
-                <div class="renewal-history-list hidden" id="historyList-{{ sub.id }}">
-                  {% for ren in sub.renewals %}
-                    <div class="renewal-history-item">
-                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.15rem;">
-                        <strong>#{{ loop.revindex }}</strong>
-                        {% if ren.renewal_type == 'AUTO' %}
-                          <span class="badge-auto">Auto-renewed</span>
-                        {% else %}
-                          <span class="badge-manual">Manual renewal</span>
-                        {% endif %}
-                      </div>
-                      <div>{{ ren.new_start_date.strftime('%b %d, %Y') }} &rarr; {{ ren.new_end_date.strftime('%b %d, %Y') }}</div>
-                      <div style="color: var(--text-muted); font-size:0.725rem;">Renewed: {{ ren.renewed_on.strftime('%b %d, %Y') }}</div>
-                      {% if ren.note %}
-                        <div style="font-style:italic; color: var(--text-muted); margin-top:0.2rem;">"{{ ren.note }}"</div>
-                      {% endif %}
+                {% if sub.is_sponsored %}
+                  <div class="sponsor-box" id="cardSponsor-{{ sub.id }}">
+                    <div style="display:flex; align-items:center; gap:0.4rem; color: #818cf8; font-weight:600; margin-bottom:0.2rem;">
+                      <i data-lucide="heart" style="width:14px;"></i>
+                      <span>Sponsored by {{ sub.sponsor_company }}</span>
                     </div>
-                  {% endfor %}
+                    {% if sub.sponsor_account %}
+                      <div style="color: var(--text-muted); font-size:0.775rem;">Sponsor Account: {{ sub.sponsor_account }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                {% if sub.note %}
+                  <div class="note-box" id="cardNote-{{ sub.id }}">
+                    "{{ sub.note }}"
+                  </div>
+                {% endif %}
+
+                {% if sub.auto_renew == 'YES' and st == 'Expired' %}
+                  <div class="autorenew-banner" id="autoRenewBanner-{{ sub.id }}">
+                    <div style="font-size:0.85rem; color: #f59e0b; margin-bottom: 0.4rem; font-weight: 500;">
+                      <i data-lucide="refresh-cw" style="width:14px; height:14px; display:inline;"></i>
+                      This subscription was marked for auto-renewal. Did it auto-renew?
+                    </div>
+                    <div style="display:flex; gap:0.4rem;">
+                      <button type="button" class="btn btn-sm btn-primary" onclick="openRenewModal({{ sub.id }}, 'AUTO', '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">Yes</button>
+                      <button type="button" class="btn btn-sm btn-secondary" onclick="dismissAutoRenewBanner({{ sub.id }}, '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">No</button>
+                    </div>
+                  </div>
+                {% endif %}
+
+                {% if sub.renewal_count > 0 %}
+                  <div style="margin-top: 0.5rem;">
+                    <div style="font-weight:600; font-size:0.875rem; color:var(--text-main); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+                      <i data-lucide="history" style="width:15px; height:15px;"></i>
+                      <span>Renewal History ({{ sub.renewal_count }})</span>
+                    </div>
+                    <div class="renewal-history-list" id="historyList-{{ sub.id }}">
+                      {% for ren in sub.renewals %}
+                        <div class="renewal-history-item">
+                          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.15rem;">
+                            <strong>#{{ loop.revindex }}</strong>
+                            {% if ren.renewal_type == 'AUTO' %}
+                              <span class="badge-auto">Auto-renewed</span>
+                            {% else %}
+                              <span class="badge-manual">Manual renewal</span>
+                            {% endif %}
+                          </div>
+                          <div>{{ ren.new_start_date.strftime('%b %d, %Y') }} &rarr; {{ ren.new_end_date.strftime('%b %d, %Y') }}</div>
+                          <div style="color: var(--text-muted); font-size:0.725rem;">Renewed: {{ ren.renewed_on.strftime('%b %d, %Y') }}</div>
+                          {% if ren.note %}
+                            <div style="font-style:italic; color: var(--text-muted); margin-top:0.2rem;">"{{ ren.note }}"</div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="details-modal-actions" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; border-top:1px solid var(--border-color); padding-top:1rem; margin-top:1rem;">
+                {% if st == 'Expired' and sub.auto_renew != 'YES' %}
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="openRenewModal({{ sub.id }}, 'MANUAL', '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">
+                    <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i>
+                    <span>Renew</span>
+                  </button>
+                {% else %}
+                  <div></div>
+                {% endif %}
+
+                <div style="display:flex; gap:0.5rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="closeDetailsModal(); openEditModal({{ sub.id }});">
+                    <i data-lucide="edit-3" style="width:14px; height:14px;"></i>
+                    <span>Edit</span>
+                  </button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="closeDetailsModal(); openDeleteModal({{ sub.id }}, '{{ sub.company_name | replace("'", "\\'") }}');">
+                    <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+                    <span>Delete</span>
+                  </button>
                 </div>
-              {% endif %}
+              </div>
             </div>
           </div>
 
-          <div class="card-footer" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
-            <div id="renewBtnContainer-{{ sub.id }}">
-              {% if st == 'Expired' and sub.auto_renew != 'YES' %}
-                <button type="button" class="btn btn-secondary btn-sm" onclick="openRenewModal({{ sub.id }}, 'MANUAL', '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')" title="Renew">
-                  <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i>
-                  <span>Renew</span>
-                </button>
-              {% endif %}
-            </div>
+          <div class="card-footer" onclick="event.stopPropagation();" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openDetailsModal({{ sub.id }})" title="View Details">
+              <i data-lucide="eye" style="width:14px; height:14px;"></i>
+              <span>Details</span>
+            </button>
 
             <div style="display:flex; gap:0.4rem; margin-left: auto;">
               <button type="button" class="btn btn-secondary btn-icon-sm" onclick="openEditModal({{ sub.id }})" id="editBtn-{{ sub.id }}" title="Edit">
-                <i data-lucide="edit-3" style="width:16px; height:16px;"></i>
+                <i data-lucide="edit-3" style="width:15px; height:15px;"></i>
               </button>
               <button type="button" class="btn btn-danger btn-icon-sm" onclick="openDeleteModal({{ sub.id }}, '{{ sub.company_name | replace("'", "\\'") }}')" id="deleteBtn-{{ sub.id }}" title="Delete">
-                <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+                <i data-lucide="trash-2" style="width:15px; height:15px;"></i>
               </button>
             </div>
           </div>
@@ -271,6 +346,20 @@
   {% endif %}
 </section>
 
+<!-- Subscription Details Modal -->
+<div class="modal-overlay" id="detailsModal">
+  <div class="modal-content" style="max-width: 520px;">
+    <div class="modal-header">
+      <h2>Subscription Details</h2>
+      <button type="button" class="close-btn" onclick="closeDetailsModal()">&times;</button>
+    </div>
+    
+    <div id="detailsModalBody">
+      <!-- Dynamically populated from clicked card details content -->
+    </div>
+  </div>
+</div>
+
 <!-- Add / Edit Subscription Modal -->
 <div class="modal-overlay" id="subscriptionModal">
   <div class="modal-content">
@@ -282,9 +371,10 @@
     <form id="subscriptionForm" action="{{ url_for('subscriptions.create') }}" method="POST">
       <input type="hidden" id="subId" name="sub_id" value="" />
 
-      <div class="form-group">
+      <div class="form-group autocomplete-container">
         <label for="company_name">Company Name <span class="required">*</span></label>
-        <input type="text" id="company_name" name="company_name" class="form-control" placeholder="e.g. Netflix, Spotify, GitHub" required />
+        <input type="text" id="company_name" name="company_name" class="form-control" placeholder="e.g. Google, Netflix, Spotify, GitHub" autocomplete="off" required />
+        <div class="autocomplete-dropdown hidden" id="companyAutocompleteDropdown"></div>
       </div>
 
       <div class="form-group">
