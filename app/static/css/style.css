@@ -922,3 +922,70 @@ a:hover {
     width: 100%;
   }
 }
+
+/* Renewal Styles */
+.autorenew-banner {
+  margin-top: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.825rem;
+}
+
+.history-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--primary-accent);
+  font-size: 0.775rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.history-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+.renewal-history-list {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.775rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.renewal-history-item {
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.35rem;
+}
+
+.renewal-history-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.badge-auto {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.badge-manual {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}

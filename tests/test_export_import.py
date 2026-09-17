@@ -11,6 +11,8 @@ def test_csv_export(client, app, user_a):
             'subscription_name': '4K Plan',
             'account': 'netflix@user.com',
             'end_date': '2026-12-31',
+            'cost': '19.99',
+            'currency': 'USD',
             'note': 'Movie night'
         })
 
@@ -30,7 +32,9 @@ def test_json_export_and_import(client, app, user_a, user_b):
             'company_name': 'Figma',
             'subscription_name': 'Professional',
             'account': 'figma_user',
-            'end_date': '2026-12-31'
+            'end_date': '2026-12-31',
+            'cost': '12.00',
+            'currency': 'USD'
         })
 
     # User A exports JSON backup

@@ -22,8 +22,10 @@ def export_csv():
         'Company Name',
         'Subscription Name',
         'Account Identifier',
+        'Cost',
         'Start Date',
         'End Date',
+        'Auto-Renew',
         'Is Sponsored',
         'Sponsor Company',
         'Sponsor Account',
@@ -36,8 +38,10 @@ def export_csv():
             sub.company_name,
             sub.subscription_name,
             sub.account,
+            f"{sub.cost:.2f}" if sub.cost is not None else '',
             sub.start_date.isoformat() if sub.start_date else '',
             sub.end_date.isoformat() if sub.end_date else '',
+            sub.auto_renew,
             'Yes' if sub.is_sponsored else 'No',
             sub.sponsor_company or '',
             sub.sponsor_account or '',
@@ -73,6 +77,10 @@ def export_json():
 @export_import_bp.route('/import/json', methods=['POST'])
 @login_required
 def import_json():
+    from app import db
+    from app.models.renewal import SubscriptionRenewal
+    from app.utils import get_user_today
+
     raw_data = None
     if 'file' in request.files:
         file = request.files['file']
@@ -98,8 +106,34 @@ def import_json():
             continue
         try:
             # Force user_id to currently logged-in user
-            SubscriptionService.create_subscription(g.user.id, item)
+            sub = SubscriptionService.create_subscription(g.user.id, item)
             imported_count += 1
+
+            # Restore renewal history if present
+            renewals_raw = item.get('renewals') or item.get('renewal_history') or []
+            if isinstance(renewals_raw, list):
+                for r_item in renewals_raw:
+                    if isinstance(r_item, dict) and r_item.get('new_start_date') and r_item.get('new_end_date'):
+                        try:
+                            r_prev = datetime.strptime(r_item['previous_end_date'], '%Y-%m-%d').date() if r_item.get('previous_end_date') else None
+                            r_on = datetime.strptime(r_item['renewed_on'], '%Y-%m-%d').date() if r_item.get('renewed_on') else get_user_today()
+                            r_start = datetime.strptime(r_item['new_start_date'], '%Y-%m-%d').date()
+                            r_end = datetime.strptime(r_item['new_end_date'], '%Y-%m-%d').date()
+                            r_type = 'AUTO' if (r_item.get('renewal_type') or '').upper() == 'AUTO' else 'MANUAL'
+                            r_note = (r_item.get('note') or '').strip()
+                            renewal = SubscriptionRenewal(
+                                subscription_id=sub.id,
+                                previous_end_date=r_prev,
+                                renewed_on=r_on,
+                                new_start_date=r_start,
+                                new_end_date=r_end,
+                                renewal_type=r_type,
+                                note=r_note if r_note else None
+                            )
+                            db.session.add(renewal)
+                        except Exception:
+                            pass
+                db.session.commit()
         except ValueError as val_err:
             errors.append(f"Item #{idx + 1} ('{item.get('company_name', 'Unknown')}'): {str(val_err)}")
 

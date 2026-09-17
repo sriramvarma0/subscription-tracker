@@ -18,6 +18,13 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
 
+    @app.before_request
+    def set_user_timezone():
+        from flask import g
+        from app.utils import get_user_timezone
+        g.user_timezone = get_user_timezone()
+        g.user_timezone_name = str(g.user_timezone)
+
     # Register Blueprints
     from app.routes.auth import auth_bp
     from app.routes.dashboard import dashboard_bp

@@ -146,6 +146,14 @@
                 <i data-lucide="credit-card" style="width:16px; color: var(--text-muted);"></i>
                 <span class="account-pill" id="cardAccount-{{ sub.id }}">{{ sub.account }}</span>
               </div>
+              {% if not sub.is_sponsored and sub.cost is not none %}
+                <div class="detail-row">
+                  <i data-lucide="dollar-sign" style="width:16px; color: var(--text-muted);"></i>
+                  <span>Cost: <strong>
+                    {% if sub.currency == 'INR' %}₹{% elif sub.currency == 'EUR' %}€{% elif sub.currency == 'GBP' %}£{% elif sub.currency == 'CAD' %}CA${% elif sub.currency == 'AUD' %}A${% else %}${% endif %}{{ "%.2f"|format(sub.cost) }}
+                  </strong></span>
+                </div>
+              {% endif %}
               <div class="detail-row">
                 <i data-lucide="calendar" style="width:16px; color: var(--text-muted);"></i>
                 <span>Start: <strong>{% if sub.start_date %}{{ sub.start_date.strftime('%b %d, %Y') }}{% else %}Not specified{% endif %}</strong></span>
@@ -157,6 +165,10 @@
                   <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.3rem;">({{ sub.expiry_info }})</span>
                 {% endif %}
                 </span>
+              </div>
+              <div class="detail-row">
+                <i data-lucide="refresh-cw" style="width:16px; color: var(--text-muted);"></i>
+                <span>Auto-renew: <strong>{{ sub.auto_renew | capitalize }}</strong></span>
               </div>
 
               {% if sub.is_sponsored %}
@@ -176,16 +188,66 @@
                   "{{ sub.note }}"
                 </div>
               {% endif %}
+
+              {% if sub.auto_renew == 'YES' and st == 'Expired' %}
+                <div class="autorenew-banner" id="autoRenewBanner-{{ sub.id }}">
+                  <div style="font-size:0.85rem; color: #f59e0b; margin-bottom: 0.4rem; font-weight: 500;">
+                    <i data-lucide="refresh-cw" style="width:14px; height:14px; display:inline;"></i>
+                    This subscription was marked for auto-renewal. Did it auto-renew?
+                  </div>
+                  <div style="display:flex; gap:0.4rem;">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openRenewModal({{ sub.id }}, 'AUTO', '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">Yes</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="dismissAutoRenewBanner({{ sub.id }}, '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')">No</button>
+                  </div>
+                </div>
+              {% endif %}
+
+              {% if sub.renewal_count > 0 %}
+                <button type="button" class="history-toggle-btn" onclick="toggleRenewalHistory({{ sub.id }})" id="historyToggle-{{ sub.id }}">
+                  <i data-lucide="history" style="width:14px; height:14px;"></i>
+                  <span>View Renewal History ({{ sub.renewal_count }})</span>
+                </button>
+                <div class="renewal-history-list hidden" id="historyList-{{ sub.id }}">
+                  {% for ren in sub.renewals %}
+                    <div class="renewal-history-item">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.15rem;">
+                        <strong>#{{ loop.revindex }}</strong>
+                        {% if ren.renewal_type == 'AUTO' %}
+                          <span class="badge-auto">Auto-renewed</span>
+                        {% else %}
+                          <span class="badge-manual">Manual renewal</span>
+                        {% endif %}
+                      </div>
+                      <div>{{ ren.new_start_date.strftime('%b %d, %Y') }} &rarr; {{ ren.new_end_date.strftime('%b %d, %Y') }}</div>
+                      <div style="color: var(--text-muted); font-size:0.725rem;">Renewed: {{ ren.renewed_on.strftime('%b %d, %Y') }}</div>
+                      {% if ren.note %}
+                        <div style="font-style:italic; color: var(--text-muted); margin-top:0.2rem;">"{{ ren.note }}"</div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
             </div>
           </div>
 
-          <div class="card-footer">
-            <button type="button" class="btn btn-secondary btn-icon-sm" onclick="openEditModal({{ sub.id }})" id="editBtn-{{ sub.id }}" title="Edit">
-              <i data-lucide="edit-3" style="width:16px; height:16px;"></i>
-            </button>
-            <button type="button" class="btn btn-danger btn-icon-sm" onclick="openDeleteModal({{ sub.id }}, '{{ sub.company_name | replace("'", "\\'") }}')" id="deleteBtn-{{ sub.id }}" title="Delete">
-              <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
-            </button>
+          <div class="card-footer" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+            <div id="renewBtnContainer-{{ sub.id }}">
+              {% if st == 'Expired' and sub.auto_renew != 'YES' %}
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openRenewModal({{ sub.id }}, 'MANUAL', '{% if sub.end_date %}{{ sub.end_date.isoformat() }}{% endif %}', '{{ sub.auto_renew }}')" title="Renew">
+                  <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i>
+                  <span>Renew</span>
+                </button>
+              {% endif %}
+            </div>
+
+            <div style="display:flex; gap:0.4rem; margin-left: auto;">
+              <button type="button" class="btn btn-secondary btn-icon-sm" onclick="openEditModal({{ sub.id }})" id="editBtn-{{ sub.id }}" title="Edit">
+                <i data-lucide="edit-3" style="width:16px; height:16px;"></i>
+              </button>
+              <button type="button" class="btn btn-danger btn-icon-sm" onclick="openDeleteModal({{ sub.id }}, '{{ sub.company_name | replace("'", "\\'") }}')" id="deleteBtn-{{ sub.id }}" title="Delete">
+                <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+              </button>
+            </div>
           </div>
         </div>
       {% endfor %}
@@ -237,31 +299,61 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label for="start_date">Start Date</label>
-          <input type="date" id="start_date" name="start_date" class="form-control" placeholder="Optional" />
+          <label for="start_date">Start Date <span style="font-weight: normal; font-size: 0.825rem; color: var(--text-muted);">(Optional)</span></label>
+          <input type="date" id="start_date" name="start_date" class="form-control" />
         </div>
 
         <div class="form-group">
-          <label for="end_date">End Date <span style="font-weight: normal; font-size: 0.825rem; color: var(--text-muted);">(Leave blank for No Expiry)</span></label>
-          <input type="date" id="end_date" name="end_date" class="form-control" />
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+            <label for="end_date" style="margin-bottom:0;">End Date <span class="required" id="endDateReqStar">*</span></label>
+            <label style="font-size:0.8rem; font-weight:normal; cursor:pointer; display:flex; align-items:center; gap:0.3rem; margin-bottom:0;">
+              <input type="checkbox" id="no_expiry" name="no_expiry" value="true" />
+              <span>No Expiry</span>
+            </label>
+          </div>
+          <input type="date" id="end_date" name="end_date" class="form-control" required />
         </div>
       </div>
 
       <div class="form-group">
-        <label>Sponsored?</label>
+        <label>Auto-renew?</label>
         <div class="radio-group">
           <label class="radio-label">
-            <input type="radio" name="is_sponsored" id="sponsored_no" value="false" checked />
-            <span>No</span>
+            <input type="radio" name="auto_renew" id="autorenew_yes" value="YES" />
+            <span>Yes</span>
           </label>
           <label class="radio-label">
-            <input type="radio" name="is_sponsored" id="sponsored_yes" value="true" />
-            <span>Yes</span>
+            <input type="radio" name="auto_renew" id="autorenew_no" value="NO" checked />
+            <span>No</span>
           </label>
         </div>
       </div>
 
-      <!-- Sponsor Fields (Hidden by default unless Sponsored is Yes) -->
+      <!-- Subscription Cost & Sponsored Checkbox Section -->
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+          <label style="margin-bottom:0;">Subscription Cost <span class="required" id="costReqStar">*</span></label>
+          <label style="font-size:0.8rem; font-weight:normal; cursor:pointer; display:flex; align-items:center; gap:0.3rem; margin-bottom:0;">
+            <input type="checkbox" id="is_sponsored" name="is_sponsored" value="true" />
+            <span>Sponsored</span>
+          </label>
+        </div>
+
+        <!-- Cost & Currency Input Group (Shown when NOT sponsored) -->
+        <div class="form-row" id="costGroup" style="gap:0.5rem; grid-template-columns: 110px 1fr;">
+          <select id="currency" name="currency" class="form-control" style="font-weight: 500;">
+            <option value="USD">$ (USD)</option>
+            <option value="INR">₹ (INR)</option>
+            <option value="EUR">€ (EUR)</option>
+            <option value="GBP">£ (GBP)</option>
+            <option value="CAD">CA$ (CAD)</option>
+            <option value="AUD">A$ (AUD)</option>
+          </select>
+          <input type="number" step="0.01" min="0" id="cost" name="cost" class="form-control" placeholder="e.g. 9.99" required />
+        </div>
+      </div>
+
+      <!-- Sponsor Fields (Hidden by default unless Sponsored is checked) -->
       <div class="sponsor-fields hidden" id="sponsorFields">
         <div class="form-group">
           <label for="sponsor_company">Sponsor Company <span class="required">*</span></label>
@@ -281,6 +373,61 @@
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeSubModal()">Cancel</button>
         <button type="submit" class="btn btn-primary" id="saveSubBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Renew Subscription Modal -->
+<div class="modal-overlay" id="renewModal">
+  <div class="modal-content" style="max-width: 480px;">
+    <div class="modal-header">
+      <h2 id="renewModalTitle">Renew Subscription</h2>
+      <button type="button" class="close-btn" onclick="closeRenewModal()">&times;</button>
+    </div>
+
+    <form id="renewForm" action="" method="POST">
+      <input type="hidden" id="renewSubId" name="sub_id" value="" />
+      <input type="hidden" id="renewalTypeInput" name="renewal_type" value="MANUAL" />
+
+      <div style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.875rem;" id="renewPrevExpiryContainer">
+        Previous End Date: <strong id="renewPrevExpiry" style="color: var(--text-main);">None</strong>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="new_start_date">New Start Date <span class="required">*</span></label>
+          <input type="date" id="new_start_date" name="new_start_date" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label for="new_end_date">New End Date <span class="required">*</span></label>
+          <input type="date" id="new_end_date" name="new_end_date" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Auto-renew?</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="auto_renew" id="renew_autorenew_yes" value="YES" />
+            <span>Yes</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="auto_renew" id="renew_autorenew_no" value="NO" />
+            <span>No</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="renewal_note">Renewal Note</label>
+        <textarea id="renewal_note" name="renewal_note" class="form-control" rows="2" placeholder="Optional renewal notes..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeRenewModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="confirmRenewBtn">Confirm Renewal</button>
       </div>
     </form>
   </div>

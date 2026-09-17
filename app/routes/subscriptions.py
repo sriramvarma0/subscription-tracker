@@ -49,6 +49,28 @@ def update(sub_id):
         flash(str(e), "error")
         return redirect(url_for('dashboard.index'))
 
+@subscriptions_bp.route('/<int:sub_id>/renew', methods=['POST'])
+@login_required
+def renew(sub_id):
+    data = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
+    try:
+        renewal_type = data.get('renewal_type', 'MANUAL')
+        subscription = SubscriptionService.renew_subscription(g.user.id, sub_id, data, default_renewal_type=renewal_type)
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'subscription': subscription.to_dict()})
+        flash(f"Subscription '{subscription.company_name}' renewed successfully.", "success")
+        return redirect(url_for('dashboard.index'))
+    except KeyError:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Subscription not found or access denied.'}), 404
+        flash("Subscription not found or access denied.", "error")
+        return redirect(url_for('dashboard.index'))
+    except ValueError as e:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': str(e)}), 400
+        flash(str(e), "error")
+        return redirect(url_for('dashboard.index'))
+
 @subscriptions_bp.route('/<int:sub_id>/delete', methods=['POST'])
 @login_required
 def delete(sub_id):

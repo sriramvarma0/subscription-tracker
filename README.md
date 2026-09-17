@@ -7,17 +7,19 @@ A lightweight, multi-user personal Subscription Tracker web application built wi
 ## 🌟 Features
 
 - **Email-Based Multi-User Identification**: Simple email entry login flow with strict session-based multi-user data isolation.
-- **Dynamic Subscription Status**: Real-time status calculation based on current date:
+- **Dynamic Subscription Status**: Real-time status calculation based on user's present date:
   - **Active**: Expiry date is > 30 days away.
   - **Expiring Soon**: Expiry date is today or within 30 days.
   - **Expired**: Expiry date has passed.
   - **No Expiry**: Undated recurring subscription.
-- **Rich Dashboard Layout**: Stat cards summary, search, status filter pills, sorting options, and glassmorphic subscription cards.
-- **Full Subscription Management**: Add, edit, and delete subscriptions with interactive modal dialogs.
+- **Auto-Renewal & Confirmation Workflow**: Track auto-renewal state (`YES` or `NO`). When a subscription marked for auto-renewal expires, the user is prompted to confirm auto-renewal or manually renew it.
+- **Renewal History System**: Complete audit history of renewals (`SubscriptionRenewal` records) tracking `AUTO` vs `MANUAL` renewals, previous expiry dates, new periods, and renewal notes.
+- **Rich Dashboard Layout**: Stat cards summary, search, status filter pills, sorting options, and glassmorphic subscription cards with expandable renewal history.
+- **Full Subscription Management**: Add, edit, renew, and delete subscriptions with interactive modal dialogs.
 - **Dynamic Sponsorship Toggle**: Show/hide sponsor company and account fields based on sponsorship choice.
-- **Data Export & Backup**: Download your subscription data as CSV or JSON backup.
-- **JSON Import**: Restore subscriptions from a JSON backup file with server-side validation.
-- **Automated Test Suite**: 100% passing Pytest test coverage verifying user auth, CRUD, status logic, data isolation, and export/import.
+- **Data Export & Backup**: Download your subscription data as CSV (including auto-renew) or JSON backup (including complete renewal history).
+- **JSON Import**: Restore subscriptions and renewal history from a JSON backup file with server-side validation.
+- **Automated Test Suite**: 100% passing Pytest test coverage verifying user auth, CRUD, renewal workflows, status logic, data isolation, and export/import.
 
 ---
 

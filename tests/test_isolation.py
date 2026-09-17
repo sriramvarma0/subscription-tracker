@@ -10,7 +10,8 @@ def test_multi_user_data_isolation(client, app, user_a, user_b):
             'company_name': 'User A Service',
             'subscription_name': 'Secret Sub',
             'account': 'user_a_acc',
-            'end_date': '2026-12-31'
+            'end_date': '2026-12-31',
+            'cost': '10.00'
         })
         sub_a_id = sub_a.id
 
@@ -19,7 +20,8 @@ def test_multi_user_data_isolation(client, app, user_a, user_b):
             'company_name': 'User B Service',
             'subscription_name': 'Private Sub',
             'account': 'user_b_acc',
-            'end_date': '2026-12-31'
+            'end_date': '2026-12-31',
+            'cost': '15.00'
         })
         sub_b_id = sub_b.id
 
